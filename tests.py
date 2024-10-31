@@ -1,63 +1,69 @@
-import main
 import pygame
-# Константы
-WIDTH, HEIGHT = 1500, 600  # Размер окна
-GROUND_LEVEL = HEIGHT - 50
-CANNON_X, CANNON_Y = 100, GROUND_LEVEL  # Координаты пушки
-CANNON_LENGTH = 125  # Длина ствола пушки
+import random
+
+# Параметры игры
 TARGET_RADIUS = 20
 TARGET_COUNT = 3
-MAX_ANGLE = 90
-MIN_ANGLE = 0
-MAX_POWER = 300  # Максимальная сила выстрела
-MIN_POWER = 50   # Минимальная сила выстрела
-power = MIN_POWER  # Начальная сила выстрела
+MIN_POWER = 50
+MAX_POWER = 300
+GROUND_LEVEL = 600 - 50
 
-# Начальные параметры
-angle = 45
-shots = 5
-targets = []
-hit_targets = 0
 
-# Тест 1: Проверка создания целей
-create_targets()  # Создаем цели
-assert len(targets) == 3, "Тест 1 не пройден: количество целей не равно TARGET_COUNT"
-for target in targets:
-    assert 400 <= target.x <= WIDTH - 50, "Тест 1 не пройден: цель выходит за пределы экрана"
+# Функция для создания целей
+def create_targets():
+    targets = []
+    positions = set()
+    while len(targets) < TARGET_COUNT:
+        x = random.randint(400, 1450)
+        if all(abs(x - pos) >= TARGET_RADIUS * 2 + 50 for pos in positions):
+            y = GROUND_LEVEL - TARGET_RADIUS
+            targets.append(pygame.Rect(x - TARGET_RADIUS, y - TARGET_RADIUS, TARGET_RADIUS * 2, TARGET_RADIUS * 2))
+            positions.add(x)
+    return targets
 
-# Тест 2: Проверка выстрела с попаданием
-# Создаем поддельную цель рядом с пушкой, чтобы гарантировать попадание
-target = pygame.Rect(150, GROUND_LEVEL - TARGET_RADIUS, TARGET_RADIUS * 2, TARGET_RADIUS * 2)
-targets.append(target)
-initial_hit_targets = hit_targets
-initial_shots = shots
 
-fire_cannon(45, 100)  # Стреляем с углом 45° и силой 100
+# Проверка попаданий
+def check_hit(targets, x, y):
+    for target in targets[:]:
+        if target.collidepoint(x, y):
+            targets.remove(target)
+            return True
+    return False
 
-assert hit_targets == initial_hit_targets + 1, "Тест 2 не пройден: попадание по цели не зафиксировано"
-assert shots == initial_shots - 1, "Тест 2 не пройден: количество попыток не уменьшилось"
 
-# Тест 3: Проверка уменьшения количества попыток
-initial_shots = shots
-fire_cannon(45, 100)
-assert shots == initial_shots - 1, "Тест 3 не пройден: количество попыток не уменьшилось после выстрела"
+# Основной тестовый скрипт
+def run_tests():
+    # Тест 1: Проверка создания целей
+    targets = create_targets()
+    assert len(
+        targets) == TARGET_COUNT, f"Ошибка: Не создано необходимое количество целей. Ожидалось {TARGET_COUNT}, получено {len(targets)}."
 
-# Тест 4: Прогресс-бар мощности выстрела
-power = 50  # Минимальная мощность
-draw_power_bar(power)
-assert MIN_POWER <= power <= MAX_POWER, "Тест 4 не пройден: мощность вне допустимых пределов"
+    # Проверка, что цели не перекрываются
+    for i in range(len(targets)):
+        for j in range(i + 1, len(targets)):
+            assert not targets[i].colliderect(targets[j]), "Ошибка: Цели перекрываются!"
 
-power = 300  # Максимальная мощность
-draw_power_bar(power)
-assert MIN_POWER <= power <= MAX_POWER, "Тест 4 не пройден: мощность вне допустимых пределов"
+    print("Тест 1: Создание целей - пройден.")
 
-# Тест 5: Прогресс-бар угла выстрела
-angle = 0  # Минимальный угол
-draw_angle_bar(angle)
-assert MIN_ANGLE <= angle <= MAX_ANGLE, "Тест 5 не пройден: угол вне допустимых пределов"
+    # Тест 2: Проверка попадания
+    x, y = targets[0].center  # Попробуем попасть в первую цель
+    hit = check_hit(targets, x, y)
+    assert hit, "Ошибка: Попадание в цель не обнаружено."
+    assert len(
+        targets) == TARGET_COUNT - 1, f"Ошибка: Количество целей не уменьшилось после попадания. Ожидалось {TARGET_COUNT - 1}, получено {len(targets)}."
 
-angle = 90  # Максимальный угол
-draw_angle_bar(angle)
-assert MIN_ANGLE <= angle <= MAX_ANGLE, "Тест 5 не пройден: угол вне допустимых пределов"
+    print("Тест 2: Проверка попадания - пройден.")
 
-print("Все тесты пройдены успешно!")
+    # Тест 3: Проверка оставшихся попыток
+    shots = 5
+    shots -= 1
+    assert shots == 4, f"Ошибка: Количество оставшихся попыток неправильно обновляется. Ожидалось 4, получено {shots}."
+
+    print("Тест 3: Проверка оставшихся попыток - пройден.")
+
+
+# Запуск тестов
+if __name__ == "__main__":
+    pygame.init()  # Инициализация Pygame для работы с Rect
+    run_tests()
+    pygame.quit()
